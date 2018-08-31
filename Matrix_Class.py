@@ -155,7 +155,7 @@ class Matrix(object):
 
 if __name__ == '__main__':
     a = Matrix([[2, 3], [3, 2], [3, 4]])
-    b = Matrix([[2, 1], [0, 2]])
+    b = Matrix([[2, 2], [0, 2]])
     i = Matrix.identity(4)
     i.pprint()
     print '\n',
