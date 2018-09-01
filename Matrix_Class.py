@@ -1,5 +1,10 @@
 class Matrix(object):
-
+    """
+    A class for Matrices. Input should be in by-row format:
+    |a b|
+    |c d|     ---- > [[a,b],[c,d],[e,f]]
+    |e f|
+    """
     def __init__(self, n):
         self.byrow = n
         self.rows = len(self.byrow)
@@ -19,50 +24,66 @@ class Matrix(object):
         else:
             self.isSquare = False
 
+    # Conforms to matrix multiplication. Returns a matrix object.
     def multiply(self, b):
-        if self.columns != b.rows:
+        if self.columns != b.rows:  # Checks to see if matrices are compatible
             print 'Undefined'
-            return 1
+            return
         product = []
+        # Create the empty matrix
         for r in range(self.rows):
             product.append([])
         for r in product:
             for c in range(b.columns):
                 r.append(0)
+        # Perform the multiplication
         for r in range(self.rows):
             for c in range(b.columns):
                 row = self.byrow[r]
-                col = list(n[c] for n in b.byrow)
-                product[r][c] = sum(list(row[i] * col[i] for i in range(self.columns)))
+                col = list(n[c] for n in b.byrow)  # grabs the num in the desired column for every row
+                product[r][c] = sum(row[i] * col[i] for i in range(self.columns))  # See dot product
         return Matrix(product)
 
-    def scale(self, m):
+    # Scales a matrix by a constant factor
+    def scale(self, f):
+        # Create empty matrix
         product = []
+        # Iterate over every number and multiply it by factor
         for r in range(self.rows):
+            # Create empty row
             row = []
             for c in range(self.columns):
-                row.append(self.byrow[r][c] * m)
+                # Multiply number at row r and column c by f
+                row.append(self.byrow[r][c] * f)
+            # Append row to resultant matrix
             product.append(row)
         return Matrix(product)
 
+    # Adds two matrices of identical dimensions
     def add(self, b):
+        # Check if matrices are the same size
         if self.rows != b.rows or self.columns != b.columns:
             print 'Dimension Error. Cannot add matrices'
-            return None
+            return
         else:
+            # Create empty matrix
             sums = []
+            # Iterate over every number in both matrices and add them
             for r in range(self.rows):
+                # Create empty row
                 row = []
                 for c in range(self.columns):
+                    # Add numbers at row r and column c together
                     row.append(self.byrow[r][c] + b.byrow[r][c])
+                # Append row to resultant matrix
                 sums.append(row)
             return Matrix(sums)
 
-    # Multiply row
+    # Multiply row (Operation)
     def mrow(self, row, factor):
         self.byrow[row] = list(n * factor for n in self.byrow[row])
 
-    # Multiply row and add
+    # Multiply row and add (Operation)
     def mrow_add(self, row, factor, dest):
         for n in range(self.columns):
             self.byrow[dest][n] += factor * self.byrow[row][n]
@@ -73,7 +94,7 @@ class Matrix(object):
             print 'Dimension Error. Only square matrices have rref.'
             return None
         else:
-            i = Identity(self.rows)
+            i = Matrix.identity(self.rows)
             copy = Matrix(self.byrow[:])
             for c in range(self.columns):
                 i.mrow(c, copy.byrow[c][c] ** -1)
@@ -85,19 +106,25 @@ class Matrix(object):
                     copy.mrow_add(c, -1 * copy.byrow[r][c], r)
             return i
 
+    # Multiplies matrix by inverse of other matrix (divides)
     def divide(self, b):
         return self.multiply(b.rref())
 
+    # Adds two matrices. Overloads + operator
     def __add__(self, other):
         return self.add(other)
 
+    # Subtracts two matrices. Overloads - operator
     def __sub__(self, other):
         return self.add(other.scale(-1))
 
+    # Multiplies two matrices. Overloads * operator
     def __mul__(self, other):
         return self.multiply(other)
 
+    # Raises a matrix to a power. Overloads ** operator
     def __pow__(self, power):
+        # Matrices can only be put to integer powers
         if int(power) != power:
             print 'Domain Error. A Matrix can not be put to a fractional power.'
         if int(power) == -1:
@@ -107,43 +134,51 @@ class Matrix(object):
             result = result * self
         return result
 
+    # Divides two. Overloads / operator
     def __div__(self, other):
-        return self.multiply(other.rref())
+        return self.divide(other)
 
-    def __lt__(self, other):
-        return self.rows * self.columns < other
-
-    def ___le__(self, other):
-        return self.rows * self.columns <= other
-
+    # Returns True if dimensions are equal. Overloads == operator
     def __eq__(self, other):
-        return self.rows * self.columns == other
+        return self.rows == other.rows and self.columns == other.columns
 
+    # Returns True if dimensions aren't equal. Overloads != operator
     def __ne__(self, other):
-        return self.rows * self.columns != other
+        return self.rows != other.rows and self.columns != other.columns
 
-    def __gt__(self, other):
-        return self.rows * self.columns > other
-
-    def __ge__(self, other):
-        return self.rows * self.columns >= other
-
+    # Defines str() function
+    # Allows for print() calls
     def __str__(self):
         return str(self.byrow)
 
+    # Pretty print function
     def pprint(self):
+        """
+        Format:
+        |a  b|
+        |c  d|
+        |e  f|
+
+        """
+        # Convert every int to a str
         s = [[str(e) for e in row] for row in self.byrow]
+        # Get the length of the longest str for each column
         lens = [max(map(len, col)) for col in zip(*s)]
+        # Format table with appropriate spacing
         fmt = '\t'.join('{{:{}}}'.format(x) for x in lens)
+        # Fill table
         table = ['|' + fmt.format(*row) + '|' for row in s]
+        # Print table
         print '\n'.join(table)
 
+    # method for creating an identity matrix
     @classmethod
     def identity(cls, size):
         matrix = []
         for r in range(size):
             row = []
             for c in range(size):
+                # Check if on diagonal
                 if c == r:
                     row.append(1)
                 else:
