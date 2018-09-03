@@ -120,7 +120,14 @@ class Matrix(object):
 
     # Multiplies two matrices. Overloads * operator
     def __mul__(self, other):
-        return self.multiply(other)
+        if type(self) == type(other):
+            return self.multiply(other)
+        else:
+            return self.scale(other)
+
+    # Scales the matrix. Accounts for Scalar * Matrix Case
+    def __rmul__(self, other):
+        return self.scale(other)
 
     # Raises a matrix to a power. Overloads ** operator
     def __pow__(self, power):
