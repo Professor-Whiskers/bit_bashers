@@ -158,6 +158,10 @@ class Matrix(object):
     def __str__(self):
         return str(self.byrow)
 
+    # Defines object representation.
+    def __repr__(self):
+        return self.pprint()
+
     # Pretty print function
     def pprint(self):
         """
@@ -176,7 +180,8 @@ class Matrix(object):
         # Fill table
         table = ['|' + fmt.format(*row) + '|' for row in s]
         # Print table
-        print '\n'.join(table)
+        table = '\n'.join(table)
+        return table
 
     # method for creating an identity matrix
     @classmethod
@@ -199,6 +204,6 @@ if __name__ == '__main__':
     a = Matrix([[2, 3], [3, 2], [3, 4]])
     b = Matrix([[2, 2], [0, 2]])
     i = Matrix.identity(4)
-    i.pprint()
+    print i.pprint()
     print '\n',
     (a * b).pprint()
