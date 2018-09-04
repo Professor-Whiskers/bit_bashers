@@ -95,11 +95,13 @@ class Matrix(object):
             return None
         else:
             i = Matrix.identity(self.rows)
-            copy = Matrix(self.byrow[:])
-            for c in range(self.columns):
+            i = Matrix.fractionalise(i)
+            copy = Matrix.copy(self)
+            copy = Matrix.fractionalise(copy)
+            for c in range(copy.columns):
                 i.mrow(c, copy.byrow[c][c] ** -1)
                 copy.mrow(c, copy.byrow[c][c] ** -1)
-                for r in range(self.rows):
+                for r in range(copy.rows):
                     if r == c:
                         continue
                     i.mrow_add(c, -1 * copy.byrow[r][c], r)
@@ -131,15 +133,27 @@ class Matrix(object):
 
     # Raises a matrix to a power. Overloads ** operator
     def __pow__(self, power):
+        if not self.isSquare:
+            print 'Only square Matrices can be put to a power.'
         # Matrices can only be put to integer powers
-        if int(power) != power:
+        elif int(power) != power:
             print 'Domain Error. A Matrix can not be put to a fractional power.'
-        if int(power) == -1:
-            pass
-        result = Matrix(self.byrow[:])
-        for i in range(int(power)-1):
-            result = result * self
-        return result
+        elif power == 1:
+            return self
+        elif power == -1:
+            return self.rref()
+        elif power == 0:
+            return Matrix.identity(self.rows)
+        elif power < 0:
+            inverse = Matrix(self.byrow[:]).rref()
+            result = Matrix.copy(inverse)
+            for i in range(abs(power) - 1):
+                result = result * inverse
+        else:
+            result = Matrix(self.byrow[:])
+            for i in range(int(power)-1):
+                result = result * self
+            return result
 
     # Divides two. Overloads / operator
     def __div__(self, other):
@@ -156,7 +170,7 @@ class Matrix(object):
     # Defines str() function
     # Allows for print() calls
     def __str__(self):
-        return str(self.byrow)
+        return self.pprint()
 
     # Defines object representation.
     def __repr__(self):
@@ -199,11 +213,161 @@ class Matrix(object):
         identity_matrix = cls(matrix)
         return identity_matrix
 
+    @classmethod
+    def copy(cls, matrix):
+        new = []
+        for n in matrix.byrow:
+            new.append(list(x for x in n))
+        return cls(new)
+
+    # Converts numbers in list to fractions if they aren't already
+    @classmethod
+    def fractionalise(cls, matrix):
+        frac_m = []
+        for r in matrix.byrow:
+            frac_r = []
+            for c in r:
+                if isinstance(c, Fraction):
+                    frac_r.append(c)
+                else:
+                    frac_r.append(Fraction(c, 1))
+            frac_m.append(frac_r)
+        return cls(frac_m)
+
+
+class Fraction(object):
+
+    def __init__(self, num, den):
+        self.num = num  # numerator
+        self.den = den  # denominator
+        self.check_factors()
+
+    # Multiplies the fraction
+    def multiply(self, x):
+        if type(self) == type(x):
+            return Fraction(self.num * x.num, self.den * x.den)
+        else:
+            return Fraction(self.num * x, self.den * 1)
+
+    # Divides the fraction
+    def divide(self, x):
+        if type(self) == type(x):
+            return Fraction(self.num * x.den, self.den * x.num)
+        else:
+            return Fraction(self.num * 1, self.den * x)
+
+    # returns the sum of two numbers
+    def add(self, x):
+        if type(self) == type(x):
+            new_den = self.den * x.den
+            new_num = x.den * self.num + self.den * x.num
+            return Fraction(new_num, new_den)
+        else:
+            new_num = self.num + x * self.den
+            return Fraction(new_num, self.den * 1)
+
+    # returns the difference between two numbers.
+    def subtract(self, x):
+        if type(self) == type(x):
+            new_den = self.den * x.den
+            new_num = x.den * self.num - self.den * x.num
+            return Fraction(new_num, new_den)
+        else:
+            new_num = self.num - (x * self.den)
+            return Fraction(new_num, self.den * 1)
+
+    # Returns inverse of fraction. (a/b)^ -1 = b/a
+    def inverse(self):
+        return Fraction(self.den * 1, self.num * 1)
+
+    # Checks to make sure fraction is in its simplest form
+    def check_factors(self):
+        if self.num < 0 and self.den < 0:
+            self.num = abs(self.num)
+            self.den = abs(self.den)
+        elif self.den < 0:
+            self.num = self.num * -1
+            self.den = abs(self.den)
+
+        if self.num == 0:
+            return
+        else:
+            num_factors = reduce(
+                list.__add__,
+                ([i, abs(self.num) / i] for i in range(1, int(abs(self.num) ** 0.5 + 1)) if not abs(self.num) % i))
+            den_factors = reduce(
+                list.__add__, ([i, self.den / i] for i in range(1, int(abs(self.den) ** 0.5 + 1)) if not self.den % i))
+            num_factors.sort()
+            for n in num_factors[::-1]:
+                if n in den_factors:
+                    self.num /= n
+                    self.den /= n
+                    break
+
+    # Adds two fractions. Overloads + operator
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
+    # Subtracts two fractions. Overloads - operator
+    def __sub__(self, other):
+        return self.subtract(other)
+
+    def __rsub__(self, other):
+        return self.subtract(other)
+
+    # Multiplies two fractions. Overloads * operator
+    def __mul__(self, other):
+        return self.multiply(other)
+
+    # Scales the Fraction. Accounts for Scalar * Fraction Case
+    def __rmul__(self, other):
+        return self.multiply(other)
+
+    # Raises a fraction to a power. Overloads ** operator
+    def __pow__(self, power):
+        if int(power) != power:
+            print 'Fraction doesn\'t handle fractional powers atm'
+        elif power == 1:
+            return self
+        elif power == -1:
+            return self.inverse()
+        elif power == 0:
+            return Fraction(1, 1)
+        elif power < 0:
+            return Fraction(self.den ** abs(power), self.num ** abs(power))
+        else:
+            return Fraction(self.num ** power, self.den ** power)
+
+    # Divides two. Overloads / operator
+    def __div__(self, other):
+        return self.divide(other)
+
+    # Returns True if dimensions are equal. Overloads == operator
+    def __eq__(self, other):
+        return self.num == other.num and self.den == other.den
+
+    # Returns True if dimensions aren't equal. Overloads != operator
+    def __ne__(self, other):
+        return self.num != other.num and self.den != other.den
+
+    def __str__(self):
+        if self.den == 1:
+            return str(self.num)
+        elif self.num == 0:
+            return '0'
+        else:
+            return '{0}/{1}'.format(self.num, self.den)
+
 
 if __name__ == '__main__':
-    a = Matrix([[2, 3], [3, 2], [3, 4]])
+    a = Matrix([[2, 3], [3, 2]])
     b = Matrix([[2, 2], [0, 2]])
-    i = Matrix.identity(4)
-    print i.pprint()
-    print '\n',
-    (a * b).pprint()
+    i = Matrix.identity(2)
+    print i
+    print a/b + i
+
+
+
