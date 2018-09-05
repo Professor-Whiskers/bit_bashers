@@ -237,10 +237,11 @@ class Matrix(object):
 
 class Fraction(object):
 
-    def __init__(self, num, den):
+    def __init__(self, num, den, power=1):
         self.num = num  # numerator
         self.den = den  # denominator
-        self.check_factors()
+        self.pow = power
+        self.simplify()
 
     # Multiplies the fraction
     def multiply(self, x):
@@ -281,14 +282,17 @@ class Fraction(object):
         return Fraction(self.den * 1, self.num * 1)
 
     # Checks to make sure fraction is in its simplest form
-    def check_factors(self):
+    def simplify(self):
         if self.num < 0 and self.den < 0:
             self.num = abs(self.num)
             self.den = abs(self.den)
         elif self.den < 0:
             self.num = self.num * -1
             self.den = abs(self.den)
-
+        if isinstance(self.pow, Fraction) and self.pow.den == 1:
+            self.num = self.num ** self.pow.num
+            self.den = self.den ** self.pow.num
+            self.pow = 1
         if self.num == 0:
             return
         else:
@@ -303,6 +307,8 @@ class Fraction(object):
                     self.num /= n
                     self.den /= n
                     break
+
+
 
     # Adds two fractions. Overloads + operator
     def __add__(self, other):
@@ -328,8 +334,10 @@ class Fraction(object):
 
     # Raises a fraction to a power. Overloads ** operator
     def __pow__(self, power):
-        if int(power) != power:
-            print 'Fraction doesn\'t handle fractional powers atm'
+        if isinstance(power, Fraction):
+            return Fraction(self.num * 1, self.den * 1, self.pow * power)
+        elif int(power) != power:
+            print 'Fractional powers must be a Fraction object'
         elif power == 1:
             return self
         elif power == -1:
@@ -347,13 +355,48 @@ class Fraction(object):
 
     # Returns True if dimensions are equal. Overloads == operator
     def __eq__(self, other):
-        return self.num == other.num and self.den == other.den
+        if isinstance(other, Fraction):
+            return self.num == other.num and self.den == other.den
+        else:
+            return self.evaluate() == other
 
     # Returns True if dimensions aren't equal. Overloads != operator
     def __ne__(self, other):
-        return self.num != other.num and self.den != other.den
+        if isinstance(other, Fraction):
+            return self.num != other.num and self.den != other.den
+        else:
+            return self.evaluate() != other
+
+    def __lt__(self, other):
+        if isinstance(other, Fraction):
+            return self.num * other.den < other.num * self.den
+        else:
+            return self.evaluate() < other
+
+    def __le__(self, other):
+        if isinstance(other, Fraction):
+            return self.num * other.den <= other.num * self.den
+        else:
+            return self.evaluate() <= other
+
+    def __gt__(self, other):
+        if isinstance(other, Fraction):
+            return self.num * other.den > other.num * self.den
+        else:
+            return self.evaluate() > other
+
+    def __ge__(self, other):
+        if isinstance(other, Fraction):
+            return self.num * other.den >= other.num * self.den
+        else:
+            return self.evaluate() >= other
 
     def __str__(self):
+        if isinstance(self.pow, Fraction):
+            if self.pow.num == 0:
+                return '1'
+            elif self.pow.num != self.pow.den:
+                return '({0}/{1})^({2}/{3})'.format(self.num, self.den, self.pow.num, self.pow.den)
         if self.den == 1:
             return str(self.num)
         elif self.num == 0:
@@ -361,13 +404,16 @@ class Fraction(object):
         else:
             return '{0}/{1}'.format(self.num, self.den)
 
+    def evaluate(self):
+        if isinstance(self.pow, Fraction):
+            return (self.num/float(self.den)) ** (self.pow.num/float(self.pow.den))
+        else:
+            return self.num/float(self.den)
+
 
 if __name__ == '__main__':
     a = Matrix([[2, 3], [3, 2]])
     b = Matrix([[2, 2], [0, 2]])
     i = Matrix.identity(2)
-    print i
-    print a/b + i
-
-
-
+    c = Fraction(4, 5)
+    d = Fraction(1, 2)
