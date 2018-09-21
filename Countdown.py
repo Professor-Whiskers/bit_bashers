@@ -2,10 +2,6 @@ from random import *
 from itertools import permutations, product
 
 
-def brackets(n):
-    return ')' * n
-
-
 def calc(a1, operator, a2):  # A basic function for calculating with
     if operator == ' + ':
         return a1 + a2
@@ -20,11 +16,118 @@ def calc(a1, operator, a2):  # A basic function for calculating with
         return a1 * a2
 
 
+def counter(string, char):
+    count = 0
+    for c in string:
+        if c == char:
+            count += 1
+    return count
+
+
 def add_solution(result):
+    result = remove_brackets(result)
     if len(solutions) < limit and result not in solutions:
         solutions.append(result)
         if len(solutions) == limit:
             print_solutions()
+
+
+def compare_operators(first, second, pos):
+    if first == '+':
+        if second == '+':
+            return True
+        elif second == '-':
+            if pos:
+                return True
+            else:
+                return False
+        elif second == '*':
+            return False
+        elif second == '/':
+            return False
+    elif first == '-':
+        if second == '+':
+            return True
+        elif second == '-':
+            if pos:
+                return True
+            else:
+                return False
+        elif second == '*':
+            return False
+        elif second == '/':
+            return False
+    elif first == '*':
+        if second == '+':
+            return True
+        elif second == '-':
+            return True
+        elif second == '*':
+            return True
+        elif second == '/':
+            if pos:
+                return True
+            else:
+                return False
+    elif first == '/':
+        if second == '+':
+            return True
+        elif second == '-':
+            return True
+        elif second == '*':
+            return True
+        elif second == '/':
+            if pos:
+                return True
+            else:
+                return False
+
+
+def remove_brackets(string):
+    no_close_brackets = counter(string, ')')
+    open_brackets = []
+    firsts_to_skip = []
+    brackets_to_remove = []
+    first_op = '+'
+    for i in range(len(string)):
+        if string[i] == '(':
+            open_brackets.append(i)
+        elif string[i] == ')':
+            for x in range(open_brackets[-1], i):
+                if x not in firsts_to_skip and string[x] in ['+', '-', '/', '*']:
+                    first_op = string[x]
+                    firsts_to_skip.append(x)
+            if len(firsts_to_skip) == no_close_brackets:
+                for x in range(len(string)):
+                    if x not in firsts_to_skip and string[x] in ['+', '-', '/', '*']:
+                        if x > i:
+                            pos = 1
+                        else:
+                            pos = 0
+                        if compare_operators(first_op, string[x], pos):
+                            brackets_to_remove.append(open_brackets[-1])
+                            brackets_to_remove.append(i)
+
+            if len(open_brackets) == 1 or open_brackets[-1] - 1 == open_brackets[-2]:
+                pos = 1  # AFTER
+                for x in range(i, len(string)):
+                    if string[x] in ['+', '-', '/', '*']:
+                        if compare_operators(first_op, string[x], pos):
+                            brackets_to_remove.append(open_brackets[-1])
+                            brackets_to_remove.append(i)
+            else:  # BEFORE
+                pos = 0
+                for x in range(open_brackets[-2], open_brackets[-1]):
+                    if string[x] in ['+', '-', '/', '*']:
+                        if compare_operators(first_op, string[x], pos):
+                            brackets_to_remove.append(open_brackets[-1])
+                            brackets_to_remove.append(i)
+            open_brackets = open_brackets[:-1]
+    new_string = list('' for i in range(len(string)))
+    for i in range(len(string)):
+        if i not in brackets_to_remove:
+            new_string[i] = string[i]
+    return ''.join(new_string)
 
 
 def solve():
@@ -47,25 +150,17 @@ def solve():
     for num_perm in set(permutations(number, 3)):
         for op_perm in (p for p in product(op, repeat=2)):
             result = calc(num_perm[0], op_perm[0], calc(num_perm[1], op_perm[1], num_perm[2]))
-            
+            # a + (b + c)
             if result == target:
-                if op_perm[1] == ' - ' or op_perm[1] == ' + ' and op_perm[0] == ' * ' or op_perm[0] == ' / ':
-                    solution_str = ''.join(str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1]
-                                           + str(num_perm[2]) + ')' + ' = ' + str(result))
-                else:
-                    solution_str = ''.join(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1]
-                                           + str(num_perm[2]) + ' = ' + str(result))
+                solution_str = str(num_perm[0]) + op_perm[0] + '(' +\
+                               str(num_perm[1]) + op_perm[1] + str(num_perm[2]) + ')' + ' = ' + str(result)
                 add_solution(solution_str)
 
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1], num_perm[2])
-
+            # (a + b) + c
             if result == target:
-                if op_perm[0] == ' - ' or op_perm[0] == ' + ' and op_perm[1] == ' * ' or op_perm[1] == ' / ':
-                    solution_str = ''.join('(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1]
-                                           + str(num_perm[2]) + ' = ' + str(result))
-                else:
-                    solution_str = ''.join(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1]
-                                           + str(num_perm[2]) + ' = ' + str(result))
+                solution_str = '(' + str(num_perm[0]) + op_perm[0] + \
+                               str(num_perm[1]) + ')' + op_perm[1] + str(num_perm[2]) + ' = ' + str(result)
                 add_solution(solution_str)
 
     for num_perm in set(permutations(number, 4)):
@@ -73,62 +168,27 @@ def solve():
             
             result = calc(num_perm[0], op_perm[0], calc(num_perm[1], op_perm[1],
                                                         calc(num_perm[2], op_perm[2], num_perm[3])))
+            # a + (b + (c + d))
             if result == target:
-                solution_str = []
-                if (op_perm[1] == ' - ' and op_perm[0] != ' + ') or (op_perm[1] == ' + ' and op_perm[0] != ' + ') \
-                        or op_perm[1] == ' / ':
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (op_perm[2] == ' + ' and op_perm[1] != ' + ')\
-                        or op_perm[2] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket + 1) + ' = ' + str(
-                            result))
-                else:
-                    solution_str.append(
-                        str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket) + ' = ' + str(result))
-                add_solution(''.join(solution_str))
-            bracket = 0
+                solution_str = str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1] + '(' +\
+                               str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ')) = ' + str(result)
+                add_solution(solution_str)
 
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                           calc(num_perm[2], op_perm[2], num_perm[3]))
+            # (a + b) + (c + d)
             if result == target:
-                solution_str = []
-                if (op_perm[1] == ' - ' and op_perm[0] != ' + ') or (op_perm[1] == ' + '
-                                                                     and op_perm[0] != ' + ') or op_perm[1] == ' / ':
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (op_perm[2] == ' + ' and op_perm[1] != ' + ')\
-                        or op_perm[2] == ' / ':
-                    solution_str.append('(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket + 1))
-                else:
-                    solution_str.append(str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket))
-                solution_str.append(' = ' + str(result))
-                add_solution(''.join(solution_str))
-
-            bracket = 0
+                solution_str = '(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1] + '(' + \
+                               str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ') = ' + str(result)
+                add_solution(solution_str)
 
             result = calc(num_perm[0], op_perm[0],
                           calc(calc(num_perm[1], op_perm[1], num_perm[2]), op_perm[2], num_perm[3]))
+            # a + ((b + c) + d)
             if result == target:
-                solution_str = []
-                if (op_perm[1] == ' - ' and op_perm[0] != ' + ') or (op_perm[1] == ' + ' and op_perm[0] != ' + ')\
-                        or op_perm[1] == ' / ':
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (op_perm[2] == ' + '
-                                                                     and op_perm[1] != ' + ') or op_perm[2] == ' / ':
-                    solution_str.append('(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket + 1))
-                else:
-                    solution_str.append(str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket))
-                solution_str.append(' = ' + str(result))
-                add_solution(''.join(solution_str))
+                solution_str = str(num_perm[0]) + op_perm[0] + '((' + str(num_perm[1]) + op_perm[1] + \
+                               str(num_perm[2]) + ')' + op_perm[2] + str(num_perm[3]) + ') = ' + str(result)
+                add_solution(solution_str)
     for num_perm in set(permutations(number, 5)):
         for op_perm in (p for p in product(op, repeat=4)):
             
@@ -136,96 +196,31 @@ def solve():
                           calc(num_perm[1], op_perm[1],
                                calc(num_perm[2], op_perm[2],
                                     calc(num_perm[3], op_perm[3], num_perm[4]))))
+            # a + (b + (c + (d + e)))
             if result == target:
-                solution_str = []
+                solution_str = str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1] + \
+                               '(' + str(num_perm[2]) + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3]\
+                               + str(num_perm[4]) + '))) = ' + str(result)
+                add_solution(solution_str)
 
-                if (op_perm[1] == ' - ' and op_perm[0] != ' + ') or (op_perm[1] == ' + ' and op_perm[0] != ' + ')\
-                        or op_perm[1] == ' / ':
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (
-                        op_perm[2] == ' + ' and op_perm[1] == ' * ' or op_perm[1] == ' / ' or op_perm[1] == ' - ')\
-                        or op_perm[2] == ' / ':
-                    solution_str.append('(' + str(num_perm[2]) + op_perm[2])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[2]) + op_perm[2])
-
-                if (op_perm[3] == ' - ' and op_perm[2] == ' * ' or op_perm[2] == ' / ' or op_perm[2] == ' - ') or (
-                        op_perm[3] == ' + ' and op_perm[2] == ' * ' or op_perm[2] == ' / ' or op_perm[2] == ' - ')\
-                        or op_perm[3] == ' / ':
-
-                    solution_str.append('(' + str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + brackets(
-                        bracket + 1) + ' = ' + str(result))
-                else:
-                    solution_str.append(
-                        str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + brackets(bracket) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
-
-            bracket = 0
-            
             result = calc(calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                                calc(num_perm[2], op_perm[2], num_perm[3])), op_perm[3], num_perm[4])
-
+            # ((a + b) + (c + d)) + e
             if result == target:
-                solution_str = []
-
-                if op_perm[3] == ' * ' and (op_perm[1] != ' * ' or op_perm[1] != ' / '):
-                    solution_str.append('(')
-                    bracket = 1
-
-                if ((op_perm[0] == ' - ' or op_perm[0] == ' + ') and op_perm[1] != ' + ' and op_perm[1] != ' - ')\
-                        or op_perm[1] == ' / ':
-                    solution_str.append('(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1])
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (op_perm[2] == ' + ' and op_perm[1] != ' + ')\
-                        or op_perm[2] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ')' + brackets(bracket) +
-                        op_perm[3] + str(num_perm[4]) + ' = ' + str(result))
-                else:
-                    solution_str.append(
-                        str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket) + op_perm[3] + str(
-                            num_perm[4]) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
-            bracket = 0
+                solution_str = '((' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1] + \
+                               '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + '))' + op_perm[3] \
+                               + str(num_perm[4]) + ' = ' + str(result)
+                add_solution(solution_str)
             
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                           calc(num_perm[2], op_perm[2], calc(num_perm[3], op_perm[3], num_perm[4])))
-
+            # (a + b) + (c + (d + e))
             if result == target:
+                solution_str = '(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1] + \
+                               '(' + str(num_perm[2]) + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3] \
+                               + str(num_perm[4]) + ')) = ' + str(result)
+                add_solution(solution_str)
 
-                solution_str = []
-
-                if ((op_perm[0] == ' - ' or op_perm[0] == ' + ') and op_perm[1] != ' + ' and op_perm[1] != ' - ')\
-                        or op_perm[1] == ' / ':
-                    solution_str.append('(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1])
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (op_perm[2] == ' + ' and op_perm[1] != ' + ')\
-                        or op_perm[2] == ' / ':
-                    solution_str.append('(' + str(num_perm[2]) + op_perm[2])
-                    bracket = 1
-                else:
-                    solution_str.append(str(num_perm[2]) + op_perm[2])
-
-                if (op_perm[3] == ' + ' and op_perm[2] == ' * ' or op_perm[2] == ' / ' or op_perm[2] == ' - ')\
-                        or op_perm[3] == ' / ':
-                    solution_str.append('(' + str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + ')' + brackets(
-                        bracket) + ' = ' + str(result))
-                else:
-                    solution_str.append(
-                        str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + brackets(bracket) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
     for num_perm in set(permutations(number, 6)):
         for op_perm in (p for p in product(op, repeat=5)):
 
@@ -233,122 +228,32 @@ def solve():
                           calc(num_perm[1], op_perm[1],
                                calc(num_perm[2], op_perm[2],
                                     calc(num_perm[3], op_perm[3], calc(num_perm[4], op_perm[4], num_perm[5])))))
+            # a + (b + (c + (d + (e + f))))
             if result == target:
-                solution_str = []
-                bracket = 0
-
-                if (op_perm[1] == ' - ' and op_perm[0] != ' + ') or (
-                        op_perm[1] == ' + ' and op_perm[0] != ' + ') or op_perm[1] == ' / ':
-                    solution_str.append(
-                        str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (
-                        op_perm[2] == ' + ' and op_perm[1] != ' + ') or op_perm[2] == ' / ':
-                    solution_str.append('(' + str(num_perm[2]) + op_perm[2])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[2]) + op_perm[2])
-
-                if (op_perm[3] == ' - ' and op_perm[2] != ' + ') or (
-                        op_perm[3] == ' + ' and op_perm[2] != ' + ') or op_perm[3] == ' / ':
-                    solution_str.append('(' + str(num_perm[3]) + op_perm[3])
-                    bracket = bracket + 1
-                else:
-                    solution_str.append(str(num_perm[3]) + op_perm[3])
-
-                if (op_perm[4] == ' - ' and op_perm[3] != ' + ') or (
-                        op_perm[4] == ' + ' and op_perm[3] != ' + ') or op_perm[4] == ' / ':
-                    solution_str.append('(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + brackets(
-                        bracket + 1) + ' = ' + str(result))
-                else:
-                    solution_str.append(str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + brackets(
-                        bracket) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
+                solution_str = str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1] + \
+                               '(' + str(num_perm[2]) + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3] \
+                               + '(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ')))) = ' + str(result)
+                add_solution(solution_str)
 
             result = calc(calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                                calc(num_perm[2], op_perm[2], num_perm[3])), op_perm[3],
                           calc(num_perm[4], op_perm[4], num_perm[5]))
-
+            # ((a + b) + (c + d)) + (e + f)
             if result == target:
-
-                solution_str = []
-
-                if op_perm[3] == ' * ' and (op_perm[1] != ' * ' or op_perm[1] != ' / ') or op_perm[4] != ' * ':
-                    solution_str.append('(')
-                    bracket = 1
-
-                if ((op_perm[0] == ' - ' or op_perm[0] == ' + ') and op_perm[1] != ' + ' and op_perm[1] != ' - ')\
-                        or op_perm[1] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1])
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + op_perm[1])
-
-                if (op_perm[2] == ' - ' and op_perm[1] != ' + ') or (
-                        op_perm[2] == ' + ' and op_perm[1] != ' + ') or op_perm[2] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ')' + brackets(
-                            bracket) + op_perm[3])
-                else:
-                    solution_str.append(
-                        str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + brackets(bracket) + op_perm[3])
-
-                if (op_perm[4] == ' - ' and op_perm[3] != ' + ') or (
-                        op_perm[4] == ' + ' and op_perm[3] != ' + ') or op_perm[4] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ')' + ' = ' + str(
-                            result))
-                else:
-                    solution_str.append(
-                        str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
-
-            first = 0
-            bracket = 0
-
-            solution_str = []
+                solution_str = '((' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1] + \
+                               '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + '))' + op_perm[3] \
+                               + '(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ') = ' + str(result)
+                add_solution(solution_str)
 
             result = calc(calc(num_perm[0], op_perm[0],
                                calc(calc(num_perm[1], op_perm[1], num_perm[2]), op_perm[2],
                                calc(num_perm[3], op_perm[3], num_perm[4]))), op_perm[4], num_perm[5])
-
+            # (a + ((b + c) + (d + e))) + f
             if result == target:
-
-                if ((op_perm[0] == ' - ' or op_perm[0] == ' + ') and op_perm[4] != ' + ' and op_perm[4] != ' - ')\
-                        or op_perm[4] == ' / ':
-                    solution_str.append('(' + str(num_perm[0]) + op_perm[0])
-                    bracket = 1
-                    first = 1
-                else:
-                    solution_str.append(str(num_perm[0]) + op_perm[0])
-
-                if op_perm[2] == ' + ' and op_perm[0] == ' - ' or op_perm[2] == ' - '\
-                        and op_perm[0] == ' - ' or op_perm[2] == ' - ' and op_perm[0] == ' + ' or op_perm[2] == ' / ':
-                    solution_str.append('(')
-                    bracket = bracket + 1
-
-                if (op_perm[1] == ' + ' or op_perm[1] == ' - ' and (
-                        (op_perm[0] != ' + ' and first != 1) or op_perm[2] != ' + ')) or op_perm[1] == ' / ':
-                    solution_str.append(
-                        '(' + str(num_perm[1]) + op_perm[1] + str(num_perm[2]) + ')' + op_perm[2])
-                else:
-                    solution_str.append(str(num_perm[1]) + op_perm[1] + str(num_perm[2]) + op_perm[2])
-
-                if (op_perm[3] == ' + ' or op_perm[1] == ' - ' and (
-                        op_perm[1] != ' + ' or (op_perm[2] != ' + ' and first != 1))) or op_perm[1] == ' / ':
-                    solution_str.append('(' + str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + brackets(
-                        bracket + 1) + op_perm[4] + str(num_perm[5]) + ' = ' + str(result))
-                else:
-                    solution_str.append(
-                        str(num_perm[3]) + op_perm[3] + str(num_perm[4]) + brackets(bracket) +
-                        op_perm[4] + str(num_perm[5]) + ' = ' + str(result))
-
-                add_solution(''.join(solution_str))
+                solution_str = '(' + str(num_perm[0]) + op_perm[0] + '((' + str(num_perm[1]) + op_perm[1] +\
+                               str(num_perm[2]) + ')' + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3] \
+                               + str(num_perm[4]) + ')))' + op_perm[4] + str(num_perm[5]) + ' = ' + str(result)
+                add_solution(solution_str)
     print_solutions()
 
 
@@ -361,27 +266,29 @@ def print_solutions():
         exit(0)
 
 
-number = list(randint(1, 20) for i in range(6))
+if __name__ == '__main__':
 
-print 'Numbers:', number
+    number = list(randint(1, 20) for i in range(6))
 
-target = randint(40, 100)
+    print 'Numbers:', number
 
-print 'Target:', target
+    target = randint(40, 100)
 
-solutions = []
+    print 'Target:', target
 
-numbers = []
+    solutions = []
 
-# string_num = raw_input("What are the Numbers? \nPlease ensure that the numbers are separated by a comma.\n")
+    numbers = []
 
-solution = []
+    # string_num = raw_input("What are the Numbers? \nPlease ensure that the numbers are separated by a comma.\n")
 
-# number = map(int, string_num.split(','))  # splits the numbers as per ',' and then changes their format to an integer
+    solution = []
 
-# target = int(raw_input("What is the Target?\n"))  # Asks the user for the target and converts it to an integer
+    # number = map(int, string_num.split(','))
 
-op = (' + ', ' - ', ' / ', ' * ')  # represents plus, subtract, divide and times
+    # target = int(raw_input("What is the Target?\n"))  # Asks the user for the target and converts it to an integer
 
+    op = (' + ', ' - ', ' / ', ' * ')  # represents plus, subtract, divide and times
 
-solve()  # initiates the program
+    solve()  # initiates the program
+
