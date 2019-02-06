@@ -41,7 +41,8 @@ class Matrix(object):
             for c in range(b.columns):
                 row = self.byrow[r]
                 col = list(n[c] for n in b.byrow)  # grabs the num in the desired column for every row
-                product[r][c] = sum(row[i] * col[i] for i in range(self.columns))  # See dot product
+                product[r][c] = vsum(row[i] * col[i] for i in range(self.columns))  # See dot product
+                # print product
         return Matrix(product)
 
     # Scales a matrix by a constant factor
@@ -112,6 +113,51 @@ class Matrix(object):
     def divide(self, b):
         return self.multiply(b.rref())
 
+    def prod_diag(self, n):
+        res = 1
+        for i in range(len(n)):
+            res *= self.byrow[i][n[i]]
+        return res
+
+    def det(self):
+        """
+
+        [a  b)
+        (c  d]
+
+        [a [b [c) a) b)
+         d  e  f  d  e
+        (g (h (i] g] h]
+        012 120 201 - 210 021 102
+        [a [b [c [d) a) b) c)
+         e  f  g  h  e  f  g
+         i  j  k  l  i  j  k
+        (m (n (o (p] m] n] o]
+        0123 1230 2301
+
+        """
+
+        if not self.isSquare:
+            print "Only square matrices have determinates."
+            return 0
+        else:
+            if self.columns == 2:
+                return self.byrow[0][0] * self.byrow[1][1] - self.byrow[0][1] * self.byrow[1][0]
+            else:
+                pos = 0
+                neg = 0
+                pos_diag = range(self.columns)
+                for i in range(self.columns):
+                    pos += self.prod_diag(pos_diag)
+                    for col in range(self.columns):
+                        pos_diag[col] = (pos_diag[col] + 1) % self.columns
+                neg_diag = range(self.columns)[::-1]
+                for i in range(self.columns):
+                    neg += self.prod_diag(neg_diag)
+                    for col in range(self.columns):
+                        neg_diag[col] = (neg_diag[col] + 1) % self.columns
+                return pos - neg
+
     # Adds two matrices. Overloads + operator
     def __add__(self, other):
         return self.add(other)
@@ -174,7 +220,7 @@ class Matrix(object):
 
     # Defines object representation.
     def __repr__(self):
-        return self.pprint()
+        return 'Matrix:' + self.pprint()
 
     # Pretty print function
     def pprint(self):
@@ -247,6 +293,8 @@ class Fraction(object):
     def multiply(self, x):
         if type(self) == type(x):
             return Fraction(self.num * x.num, self.den * x.den)
+        elif isinstance(self.pow, Fraction):
+            return Expression([[self]], [x])
         else:
             return Fraction(self.num * x, self.den * 1)
 
