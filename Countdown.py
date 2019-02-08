@@ -1,8 +1,11 @@
 from random import *
 from itertools import permutations, product
+from time import time
 
 
 def calc(a1, operator, a2):  # A basic function for calculating with
+    global n_calc
+    n_calc += 1
     if operator == ' + ':
         return a1 + a2
     if operator == ' - ':
@@ -97,6 +100,7 @@ def remove_brackets(string):
                 if x not in firsts_to_skip and string[x] in ['+', '-', '/', '*']:
                     first_op = string[x]
                     firsts_to_skip.append(x)
+                    break
             if len(firsts_to_skip) == no_close_brackets:
                 for x in range(len(string)):
                     if x not in firsts_to_skip and string[x] in ['+', '-', '/', '*']:
@@ -115,10 +119,11 @@ def remove_brackets(string):
                         if compare_operators(first_op, string[x], pos):
                             brackets_to_remove.append(open_brackets[-1])
                             brackets_to_remove.append(i)
+                        break
             else:  # BEFORE
                 pos = 0
                 for x in range(open_brackets[-2], open_brackets[-1]):
-                    if string[x] in ['+', '-', '/', '*']:
+                    if string[x] in ['+', '-', '/', '*'] and x not in firsts_to_skip:
                         if compare_operators(first_op, string[x], pos):
                             brackets_to_remove.append(open_brackets[-1])
                             brackets_to_remove.append(i)
@@ -131,18 +136,14 @@ def remove_brackets(string):
 
 
 def solve():
-    
-    bracket = 0
-    
-    global limit
-    # limit = int(raw_input("How many answers do you want? \n"))  # asks the user how many answers they want
-    limit = 10
+    global n_comp
     if target in number:
         add_solution(str(target) + ' = ' + str(target))
         
     for num_perm in set(permutations(number, 2)):
         for o1 in op:
             result = calc(num_perm[0], o1, num_perm[1])
+            n_comp += 1
             if result == target:
                 solution_str = ''.join(str(num_perm[0]) + o1 + str(num_perm[1]) + ' = ' + str(result))  
                 add_solution(solution_str)
@@ -151,6 +152,7 @@ def solve():
         for op_perm in (p for p in product(op, repeat=2)):
             result = calc(num_perm[0], op_perm[0], calc(num_perm[1], op_perm[1], num_perm[2]))
             # a + (b + c)
+            n_comp += 1
             if result == target:
                 solution_str = str(num_perm[0]) + op_perm[0] + '(' +\
                                str(num_perm[1]) + op_perm[1] + str(num_perm[2]) + ')' + ' = ' + str(result)
@@ -158,6 +160,7 @@ def solve():
 
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1], num_perm[2])
             # (a + b) + c
+            n_comp += 1
             if result == target:
                 solution_str = '(' + str(num_perm[0]) + op_perm[0] + \
                                str(num_perm[1]) + ')' + op_perm[1] + str(num_perm[2]) + ' = ' + str(result)
@@ -169,6 +172,7 @@ def solve():
             result = calc(num_perm[0], op_perm[0], calc(num_perm[1], op_perm[1],
                                                         calc(num_perm[2], op_perm[2], num_perm[3])))
             # a + (b + (c + d))
+            n_comp += 1
             if result == target:
                 solution_str = str(num_perm[0]) + op_perm[0] + '(' + str(num_perm[1]) + op_perm[1] + '(' +\
                                str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ')) = ' + str(result)
@@ -177,6 +181,7 @@ def solve():
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                           calc(num_perm[2], op_perm[2], num_perm[3]))
             # (a + b) + (c + d)
+            n_comp += 1
             if result == target:
                 solution_str = '(' + str(num_perm[0]) + op_perm[0] + str(num_perm[1]) + ')' + op_perm[1] + '(' + \
                                str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + ') = ' + str(result)
@@ -185,13 +190,14 @@ def solve():
             result = calc(num_perm[0], op_perm[0],
                           calc(calc(num_perm[1], op_perm[1], num_perm[2]), op_perm[2], num_perm[3]))
             # a + ((b + c) + d)
+            n_comp += 1
             if result == target:
                 solution_str = str(num_perm[0]) + op_perm[0] + '((' + str(num_perm[1]) + op_perm[1] + \
                                str(num_perm[2]) + ')' + op_perm[2] + str(num_perm[3]) + ') = ' + str(result)
                 add_solution(solution_str)
     for num_perm in set(permutations(number, 5)):
         for op_perm in (p for p in product(op, repeat=4)):
-            
+            n_comp += 1
             result = calc(num_perm[0], op_perm[0],
                           calc(num_perm[1], op_perm[1],
                                calc(num_perm[2], op_perm[2],
@@ -202,7 +208,7 @@ def solve():
                                '(' + str(num_perm[2]) + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3]\
                                + str(num_perm[4]) + '))) = ' + str(result)
                 add_solution(solution_str)
-
+            n_comp += 1
             result = calc(calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                                calc(num_perm[2], op_perm[2], num_perm[3])), op_perm[3], num_perm[4])
             # ((a + b) + (c + d)) + e
@@ -211,7 +217,7 @@ def solve():
                                '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + '))' + op_perm[3] \
                                + str(num_perm[4]) + ' = ' + str(result)
                 add_solution(solution_str)
-            
+            n_comp += 1
             result = calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                           calc(num_perm[2], op_perm[2], calc(num_perm[3], op_perm[3], num_perm[4])))
             # (a + b) + (c + (d + e))
@@ -223,7 +229,7 @@ def solve():
 
     for num_perm in set(permutations(number, 6)):
         for op_perm in (p for p in product(op, repeat=5)):
-
+            n_comp += 1
             result = calc(num_perm[0], op_perm[0],
                           calc(num_perm[1], op_perm[1],
                                calc(num_perm[2], op_perm[2],
@@ -234,7 +240,7 @@ def solve():
                                '(' + str(num_perm[2]) + op_perm[2] + '(' + str(num_perm[3]) + op_perm[3] \
                                + '(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ')))) = ' + str(result)
                 add_solution(solution_str)
-
+            n_comp += 1
             result = calc(calc(calc(num_perm[0], op_perm[0], num_perm[1]), op_perm[1],
                                calc(num_perm[2], op_perm[2], num_perm[3])), op_perm[3],
                           calc(num_perm[4], op_perm[4], num_perm[5]))
@@ -244,7 +250,7 @@ def solve():
                                '(' + str(num_perm[2]) + op_perm[2] + str(num_perm[3]) + '))' + op_perm[3] \
                                + '(' + str(num_perm[4]) + op_perm[4] + str(num_perm[5]) + ') = ' + str(result)
                 add_solution(solution_str)
-
+            n_comp += 1
             result = calc(calc(num_perm[0], op_perm[0],
                                calc(calc(num_perm[1], op_perm[1], num_perm[2]), op_perm[2],
                                calc(num_perm[3], op_perm[3], num_perm[4]))), op_perm[4], num_perm[5])
@@ -258,29 +264,34 @@ def solve():
 
 
 def print_solutions():
+    time_d = time() - now
     if len(solutions) > 0:  # checks if it found anything
         for te in solutions:  # prints it
-            print te
-        print("Done.")
-        print(str(len(solutions)) + " results were found.")  # tells the user how many result were found
-        exit(0)
+            print(te)
+    print("Done.")
+    print(str(len(solutions)) + " results were found.")  # tells the user how many result were found
+    print('Time = ', time_d)
+    print('Calculations performed', n_calc)
+    print('Comparisons: ', n_comp)
+    exit(0)
 
 
 if __name__ == '__main__':
+    number = [1, 2, 3, 4, 5, 6]
+    print('Numbers:', number)
 
-    number = list(randint(1, 20) for i in range(6))
-
-    print 'Numbers:', number
-
-    target = randint(40, 100)
-
-    print 'Target:', target
+    # target = randint(40, 100)
+    target = 582
+    print('Target:', target)
 
     solutions = []
 
     numbers = []
-
+    n_calc = 0
     # string_num = raw_input("What are the Numbers? \nPlease ensure that the numbers are separated by a comma.\n")
+    n_comp = 6
+
+    limit = 1
 
     solution = []
 
@@ -289,6 +300,8 @@ if __name__ == '__main__':
     # target = int(raw_input("What is the Target?\n"))  # Asks the user for the target and converts it to an integer
 
     op = (' + ', ' - ', ' / ', ' * ')  # represents plus, subtract, divide and times
+
+    now = time()
 
     solve()  # initiates the program
 

@@ -113,12 +113,14 @@ class Matrix(object):
     def divide(self, b):
         return self.multiply(b.rref())
 
+    # For use in finding the determinate
     def prod_diag(self, n):
         res = 1
         for i in range(len(n)):
             res *= self.byrow[i][n[i]]
         return res
 
+    # Returns the determinate
     def det(self):
         """
 
@@ -157,6 +159,30 @@ class Matrix(object):
                     for col in range(self.columns):
                         neg_diag[col] = (neg_diag[col] + 1) % self.columns
                 return pos - neg
+
+    def eigval(self):
+        """
+        x is an eigenvalue of self if:
+
+             | x  0  0 |
+        det( | 0  x  0 | - self) = 0
+             | 0  0  x |
+
+        """
+        eigen = Variable('x')
+        d = Matrix.det(Matrix.identity(self.columns).scale(eigen) - self)
+        derive = d.der('x')
+        est = 1
+        guess = 1
+        test = d * derive * 2
+        halley_eq = Fraction(2 * d * derive, 2 * derive ** 2 - d * derive.der('x'))
+        tries = 0
+        while tries < 5:
+            guess -= halley_eq.eval('x', guess)
+            est = d.eval('x', guess)
+            tries += 1
+        print est, guess
+        return guess
 
     # Adds two matrices. Overloads + operator
     def __add__(self, other):
@@ -341,7 +367,7 @@ class Fraction(object):
             self.num = self.num ** self.pow.num
             self.den = self.den ** self.pow.num
             self.pow = 1
-        if self.num == 0:
+        if self.num == 0 or not isinstance(self.num, int):
             return
         else:
             num_factors = reduce(
@@ -356,7 +382,26 @@ class Fraction(object):
                     self.den /= n
                     break
 
+    def eval(self, v_name, val):
+        if isinstance(self.num, Variable):
+            num = self.num.eval(val)
+        elif isinstance(self.num, Expression):
+            num = self.num.eval(v_name, val)
+        elif isinstance(self.num, Fraction):
+            num = self.num.approx()
+        else:
+            num = self.num
 
+        if isinstance(self.den, Variable):
+            den = self.den.eval(val)
+        elif isinstance(self.den, Expression):
+            den = self.den.eval(v_name, val)
+        elif isinstance(self.den, Fraction):
+            den = self.den.approx()
+        else:
+            den = self.den
+
+        return Fraction(num, den, self.pow).approx()
 
     # Adds two fractions. Overloads + operator
     def __add__(self, other):
@@ -406,38 +451,38 @@ class Fraction(object):
         if isinstance(other, Fraction):
             return self.num == other.num and self.den == other.den
         else:
-            return self.evaluate() == other
+            return self.approx() == other
 
     # Returns True if dimensions aren't equal. Overloads != operator
     def __ne__(self, other):
         if isinstance(other, Fraction):
             return self.num != other.num and self.den != other.den
         else:
-            return self.evaluate() != other
+            return self.approx() != other
 
     def __lt__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den < other.num * self.den
         else:
-            return self.evaluate() < other
+            return self.approx() < other
 
     def __le__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den <= other.num * self.den
         else:
-            return self.evaluate() <= other
+            return self.approx() <= other
 
     def __gt__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den > other.num * self.den
         else:
-            return self.evaluate() > other
+            return self.approx() > other
 
     def __ge__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den >= other.num * self.den
         else:
-            return self.evaluate() >= other
+            return self.approx() >= other
 
     def __str__(self):
         if isinstance(self.pow, Fraction):
@@ -452,7 +497,7 @@ class Fraction(object):
         else:
             return '{0}/{1}'.format(self.num, self.den)
 
-    def evaluate(self):
+    def approx(self):
         if isinstance(self.pow, Fraction):
             return (self.num/float(self.den)) ** (self.pow.num/float(self.pow.den))
         else:
