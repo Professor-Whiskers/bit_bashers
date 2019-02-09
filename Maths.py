@@ -173,6 +173,12 @@ class Matrix(object):
             print "No rational root. "
         return guess
 
+    def sum(self):
+        res = 0
+        for row in self.byrow:
+            res += sum(row)
+        return res
+
     # Adds two matrices. Overloads + operator
     def __add__(self, other):
         return self.add(other)
