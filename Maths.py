@@ -121,44 +121,28 @@ class Matrix(object):
         return res
 
     # Returns the determinate
-    def det(self):
-        """
-
-        [a  b)
-        (c  d]
-
-        [a [b [c) a) b)
-         d  e  f  d  e
-        (g (h (i] g] h]
-        012 120 201 - 210 021 102
-        [a [b [c [d) a) b) c)
-         e  f  g  h  e  f  g
-         i  j  k  l  i  j  k
-        (m (n (o (p] m] n] o]
-        0123 1230 2301
-
-        """
-
+    def det(self, mul=1):
         if not self.isSquare:
             print "Only square matrices have determinates."
             return 0
         else:
-            if self.columns == 2:
-                return self.byrow[0][0] * self.byrow[1][1] - self.byrow[0][1] * self.byrow[1][0]
+            if self.columns == 1:
+                return mul * self.byrow[0][0]
             else:
-                pos = 0
-                neg = 0
-                pos_diag = range(self.columns)
-                for i in range(self.columns):
-                    pos += self.prod_diag(pos_diag)
-                    for col in range(self.columns):
-                        pos_diag[col] = (pos_diag[col] + 1) % self.columns
-                neg_diag = range(self.columns)[::-1]
-                for i in range(self.columns):
-                    neg += self.prod_diag(neg_diag)
-                    for col in range(self.columns):
-                        neg_diag[col] = (neg_diag[col] + 1) % self.columns
-                return pos - neg
+                sign = -1
+                res = 0
+                for coe in range(self.columns):
+                    minor = []
+                    for row in range(1, self.columns):
+                        minor_row = []
+                        for col in range(self.columns):
+                            if col != coe:
+                                minor_row.append(self.byrow[row][col])
+                        minor.append(minor_row)
+                    minor = Matrix(minor)
+                    sign *= -1
+                    res += mul * minor.det(sign * self.byrow[0][coe])
+                return res
 
     def eigval(self):
         """
@@ -173,15 +157,20 @@ class Matrix(object):
         d = Matrix.det(Matrix.identity(self.columns).scale(eigen) - self)
         derive = d.der('x')
         est = 1
+        new_est = 1
         guess = 1
-        test = d * derive * 2
         halley_eq = Fraction(2 * d * derive, 2 * derive ** 2 - d * derive.der('x'))
         tries = 0
-        while tries < 5:
-            guess -= halley_eq.eval('x', guess)
-            est = d.eval('x', guess)
+        while tries < 10:
+            guess -= float(halley_eq.eval('x', guess))
+            new_est = d.eval('x', guess)
+            if abs(est) <= abs(new_est):
+                break
+            else:
+                est = new_est
             tries += 1
-        print est, guess
+        if abs(new_est) > 0.000001:
+            print "No rational root. "
         return guess
 
     # Adds two matrices. Overloads + operator
@@ -326,7 +315,7 @@ class Fraction(object):
 
     # Divides the fraction
     def divide(self, x):
-        if type(self) == type(x):
+        if isinstance(x, Fraction):
             return Fraction(self.num * x.den, self.den * x.num)
         else:
             return Fraction(self.num * 1, self.den * x)
@@ -363,12 +352,59 @@ class Fraction(object):
         elif self.den < 0:
             self.num = self.num * -1
             self.den = abs(self.den)
+        if self.num == 1 or self. den == 1:
+            return
+        if isinstance(self.num, float) or isinstance(self.den, float):
+            return
         if isinstance(self.pow, Fraction) and self.pow.den == 1:
             self.num = self.num ** self.pow.num
             self.den = self.den ** self.pow.num
             self.pow = 1
-        if self.num == 0 or not isinstance(self.num, int):
+        if self.num == 0:
             return
+        elif isinstance(self.num, Expression) and isinstance(self.den, Expression):
+            num_fac = self.num.factorise()
+            den_fac = self.den.factorise()
+            if num_fac == 1 or den_fac == 1:
+                return
+            else:
+                fac_num_fac = reduce(list.__add__, ([i, abs(num_fac) / i] for i in
+                                                    range(1, int(abs(num_fac) ** 0.5 + 1))if not abs(num_fac) % i))
+                fac_den_fac = reduce(list.__add__, ([i, abs(den_fac) / i] for i in
+                                                    range(1, int(abs(den_fac) ** 0.5 + 1)) if not abs(den_fac) % i))
+                factors = fac_num_fac[1:][::-1]
+                for x in factors:
+                    if product(not a % x for a in fac_den_fac):
+                        self.num.factor_divide(x)
+                        self.den.factor_divide(x)
+        elif isinstance(self.num, Expression):
+            num_fac = self.num.factorise()
+            if num_fac == 1:
+                return
+            else:
+                fac_num_fac = reduce(list.__add__, ([i, abs(num_fac) / i] for i in
+                                                    range(1, int(abs(num_fac) ** 0.5 + 1))if not abs(num_fac) % i))
+                fac_den_fac = reduce(list.__add__, ([i, abs(self.den) / i] for i in
+                                                    range(1, int(abs(self.den) ** 0.5 + 1)) if not abs(self.den) % i))
+                factors = fac_num_fac[1:][::-1]
+                for x in factors:
+                    if product(not a % x for a in fac_den_fac):
+                        self.num.factor_divide(x)
+                        self.den /= x
+        elif isinstance(self.den, Expression):
+            den_fac = self.den.factorise()
+            if den_fac == 1:
+                return
+            else:
+                fac_num = reduce(list.__add__, ([i, abs(self.num) / i] for i in
+                                                    range(1, int(abs(self.num) ** 0.5 + 1))if not abs(self.num) % i))
+                fac_den_fac = reduce(list.__add__, ([i, abs(den_fac) / i] for i in
+                                                    range(1, int(abs(den_fac) ** 0.5 + 1)) if not abs(den_fac) % i))
+                factors = fac_num[1:][::-1]
+                for x in factors:
+                    if product(not a % x for a in fac_den_fac):
+                        self.den.factor_divide(x)
+                        self.num /= x
         else:
             num_factors = reduce(
                 list.__add__,
@@ -425,6 +461,9 @@ class Fraction(object):
     def __rmul__(self, other):
         return self.multiply(other)
 
+    def __abs__(self):
+        return Fraction(abs(self.num), abs(self.den), self.pow)
+
     # Raises a fraction to a power. Overloads ** operator
     def __pow__(self, power):
         if isinstance(power, Fraction):
@@ -440,7 +479,10 @@ class Fraction(object):
         elif power < 0:
             return Fraction(self.den ** abs(power), self.num ** abs(power))
         else:
-            return Fraction(self.num ** power, self.den ** power)
+            try:
+                return Fraction(self.num ** power, self.den ** power)
+            except OverflowError:
+                return self.approx() ** power
 
     # Divides two. Overloads / operator
     def __div__(self, other):
@@ -450,6 +492,9 @@ class Fraction(object):
     def __eq__(self, other):
         if isinstance(other, Fraction):
             return self.num == other.num and self.den == other.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return False
         else:
             return self.approx() == other
 
@@ -457,32 +502,50 @@ class Fraction(object):
     def __ne__(self, other):
         if isinstance(other, Fraction):
             return self.num != other.num and self.den != other.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return True
         else:
             return self.approx() != other
 
     def __lt__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den < other.num * self.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return False
         else:
             return self.approx() < other
 
     def __le__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den <= other.num * self.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return False
         else:
             return self.approx() <= other
 
     def __gt__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den > other.num * self.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return False
         else:
             return self.approx() > other
 
     def __ge__(self, other):
         if isinstance(other, Fraction):
             return self.num * other.den >= other.num * self.den
+        elif isinstance(self.num, Expression) or isinstance(self.num, Variable)\
+                or isinstance(self.den, Expression) or isinstance(self.den, Variable):
+            return False
         else:
             return self.approx() >= other
+
+    def __float__(self):
+        return self.approx()
 
     def __str__(self):
         if isinstance(self.pow, Fraction):
