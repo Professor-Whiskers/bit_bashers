@@ -5,8 +5,9 @@ class Matrix(object):
     |c d|     ---- > [[a,b],[c,d],[e,f]]
     |e f|
     """
-    def __init__(self, n):
+    def __init__(self, n, base=0):
         self.byrow = n
+        self._base = base
         self.rows = len(self.byrow)
         self.columns = len(self.byrow[0])
         for row in self.byrow:
@@ -19,10 +20,20 @@ class Matrix(object):
                 for nrow in self.byrow:
                     while len(nrow) != max_column:
                         nrow.append(0)
-        if self.columns == self.rows:
-            self.isSquare = True
-        else:
-            self.isSquare = False
+        self.isSquare = self.columns == self.rows
+        self.fitToBase()
+
+    def setRC(self, row, col, val):
+        self.byrow[row][col] = val
+
+    def fitToBase(self):
+        if not self._base: return
+        for row in range(self.rows):
+            for col in range(self.columns):
+                self.byrow[row][col] = self.byrow[row][col] % self._base
+
+    def setBase(self, base):
+        self._base = base
 
     # Conforms to matrix multiplication. Returns a matrix object.
     def multiply(self, b):
@@ -41,7 +52,7 @@ class Matrix(object):
             for c in range(b.columns):
                 row = self.byrow[r]
                 col = list(n[c] for n in b.byrow)  # grabs the num in the desired column for every row
-                product[r][c] = vsum(row[i] * col[i] for i in range(self.columns))  # See dot product
+                product[r][c] = sum(row[i] * col[i] for i in range(self.columns))  # See dot product
                 # print product
         return Matrix(product)
 
@@ -241,7 +252,7 @@ class Matrix(object):
 
     # Defines object representation.
     def __repr__(self):
-        return 'Matrix:' + self.pprint()
+        return 'Matrix:\n' + self.pprint()
 
     # Pretty print function
     def pprint(self):
@@ -300,7 +311,6 @@ class Matrix(object):
                     frac_r.append(Fraction(c, 1))
             frac_m.append(frac_r)
         return cls(frac_m)
-
 
 class Fraction(object):
 
